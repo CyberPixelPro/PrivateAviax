@@ -1,21 +1,11 @@
-#
-# Copyright (C) 2021-present by TeamYukki@Github, < https://github.com/TeamYukki >.
-#
-# This file is part of < https://github.com/TeamYukki/YukkiMusicBot > project,
-# and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/TeamYukki/YukkiMusicBot/blob/master/LICENSE >
-#
-# All rights reserved.
-#
-
 import asyncio
 from datetime import datetime
 
 import config
 from pyrogram.enums import ChatType
-from YukkiMusic import app
-from YukkiMusic.core.call import Yukki, autoend
-from YukkiMusic.utils.database import (get_client, is_active_chat,
+from AviaxMusic import app
+from AviaxMusic.core.call import Aviax, autoend
+from AviaxMusic.utils.database import (get_client, is_active_chat,
                                        is_autoend)
 
 
@@ -24,7 +14,7 @@ async def auto_leave():
         while not await asyncio.sleep(
             config.AUTO_LEAVE_ASSISTANT_TIME
         ):
-            from YukkiMusic.core.userbot import assistants
+            from AviaxMusic.core.userbot import assistants
 
             for num in assistants:
                 client = await get_client(num)
@@ -75,7 +65,7 @@ async def auto_end():
                     continue
                 autoend[chat_id] = {}
                 try:
-                    await Yukki.stop_stream(chat_id)
+                    await Aviax.stop_stream(chat_id)
                 except:
                     continue
                 try:

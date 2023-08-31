@@ -1,25 +1,16 @@
-#
-# Copyright (C) 2021-present by TeamYukki@Github, < https://github.com/TeamYukki >.
-#
-# This file is part of < https://github.com/TeamYukki/YukkiMusicBot > project,
-# and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/TeamYukki/YukkiMusicBot/blob/master/LICENSE >
-#
-# All rights reserved.
-#
-
 import asyncio
 import speedtest
 from pyrogram import filters
+from pyrogram.types import Message
 from strings import get_command
-from YukkiMusic import app
-from YukkiMusic.misc import SUDOERS
+from AviaxMusic import app
+from AviaxMusic.misc import SUDOERS
 
 # Commands
 SPEEDTEST_COMMAND = get_command("SPEEDTEST_COMMAND")
 
 
-def testspeed(m):
+def testspeed(m, _):
     try:
         test = speedtest.Speedtest()
         test.get_best_server()
@@ -36,10 +27,10 @@ def testspeed(m):
 
 
 @app.on_message(filters.command(SPEEDTEST_COMMAND) & SUDOERS)
-async def speedtest_function(client, message):
+async def speedtest_function(client, message: Message, _):
     m = await message.reply_text("Running Speed test")
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    result = await loop.run_in_executor(None, testspeed, m)
+    result = await loop.run_in_executor(None, testspeed, m, _)
     output = f"""**Speedtest Results**
     
 <u>**Client:**</u>

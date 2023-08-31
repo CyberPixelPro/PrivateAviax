@@ -1,14 +1,5 @@
-#
-# Copyright (C) 2021-present by TeamYukki@Github, < https://github.com/TeamYukki >.
-#
-# This file is part of < https://github.com/TeamYukki/YukkiMusicBot > project,
-# and is released under the "GNU v3.0 License Agreement".
-# Please see < https://github.com/TeamYukki/YukkiMusicBot/blob/master/LICENSE >
-#
-# All rights reserved.
-#
-
 import asyncio
+import time
 
 from pyrogram import filters
 from pyrogram.enums import ChatType, ParseMode
@@ -20,18 +11,19 @@ import config
 from config import BANNED_USERS
 from config.config import OWNER_ID
 from strings import get_command, get_string
-from YukkiMusic import Telegram, YouTube, app
-from YukkiMusic.misc import SUDOERS
-from YukkiMusic.plugins.play.playlist import del_plist_msg
-from YukkiMusic.plugins.sudo.sudoers import sudoers_list
-from YukkiMusic.utils.database import (add_served_chat,
+from AviaxMusic import Telegram, YouTube, app
+from AviaxMusic.misc import SUDOERS, _boot_
+from AviaxMusic.plugins.play.playlist import del_plist_msg
+from AviaxMusic.plugins.sudo.sudoers import sudoers_list
+from AviaxMusic.utils.database import (add_served_chat,
                                        add_served_user,
                                        blacklisted_chats,
                                        get_assistant, get_lang,
                                        get_userss, is_on_off,
-                                       is_served_private_chat)
-from YukkiMusic.utils.decorators.language import LanguageStart
-from YukkiMusic.utils.inline import (help_pannel, private_panel,
+                                       is_served_private_chat, is_banned_user)
+from AviaxMusic.utils import bot_sys_stats
+from AviaxMusic.utils.decorators.language import LanguageStart
+from AviaxMusic.utils.inline import (help_pannel, private_panel,
                                      start_pannel)
 
 loop = asyncio.get_running_loop()
@@ -49,8 +41,10 @@ async def start_comm(client, message: Message, _):
         name = message.text.split(None, 1)[1]
         if name[0:4] == "help":
             keyboard = help_pannel(_)
-            return await message.reply_text(
-                _["help_1"], reply_markup=keyboard
+            return await message.reply_photo(
+                photo=config.START_IMG_URL
+                captain=_["help_1"].format(config.SUPPORT_GROUP),
+                reply_markup=keyboard,
             )
         if name[0:4] == "song":
             return await message.reply_text(_["song_2"])
@@ -167,6 +161,11 @@ async def start_comm(client, message: Message, _):
                             text="🎥 Watch ", url=f"{link}"
                         ),
                         InlineKeyboardButton(
+                            text="🏠 Support", url=config.SUPPORT_GROUP
+                        ),
+                    ],
+                    [
+                        InlineKeyboardButton(
                             text="🔄 Close", callback_data="close"
                         ),
                     ],
@@ -188,37 +187,17 @@ async def start_comm(client, message: Message, _):
                     f"{message.from_user.mention} has just started bot to check <code>VIDEO INFORMATION</code>\n\n**USER ID:** {sender_id}\n**USER NAME:** {sender_name}",
                 )
     else:
-        try:
-            await app.resolve_peer(OWNER_ID[0])
-            OWNER = OWNER_ID[0]
-        except:
-            OWNER = None
-        out = private_panel(_, app.username, OWNER)
-        if config.START_IMG_URL:
-            try:
-                await message.reply_photo(
-                    photo=config.START_IMG_URL,
-                    caption=_["start_2"].format(
-                        config.MUSIC_BOT_NAME
-                    ),
-                    reply_markup=InlineKeyboardMarkup(out),
-                )
-            except:
-                await message.reply_text(
-                    _["start_2"].format(config.MUSIC_BOT_NAME),
-                    reply_markup=InlineKeyboardMarkup(out),
-                )
-        else:
-            await message.reply_text(
-                _["start_2"].format(config.MUSIC_BOT_NAME),
-                reply_markup=InlineKeyboardMarkup(out),
-            )
-        if await is_on_off(config.LOG):
-            sender_id = message.from_user.id
-            sender_name = message.from_user.first_name
+        out = private_panel(_)
+        UP, CPU, RAM, DISK = await bot_sys_stats()
+        await message.reply_photo(
+            photo=config.START_IMG_URL,
+            caption=_["start_2"].format(message.from_user.mention, app.mention, UP, DISK, CPU, RAM),
+            reply_markup=InlineKeyboardMarkup(out),
+        )
+        if await is_on_off(2):
             return await app.send_message(
-                config.LOG_GROUP_ID,
-                f"{message.from_user.mention} has just started Bot.\n\n**USER ID:** {sender_id}\n**USER NAME:** {sender_name}",
+                chat_id=config.LOGGER_ID,
+                text=f"{message.from_user.mention} has just started the bot.\n\n<b>User ID :</b> <code>{message.from_user.id}</code>\n<b>USER NAME :</b> @{message.from_user.username}",
             )
 
 
@@ -228,15 +207,15 @@ async def start_comm(client, message: Message, _):
     & ~BANNED_USERS
 )
 @LanguageStart
-async def testbot(client, message: Message, _):
-    out = start_pannel(_)
-    return await message.reply_text(
-        _["start_1"].format(
-            message.chat.title, config.MUSIC_BOT_NAME
-        ),
+async def start_gp(client, message: Message, _):
+    out = start_panel(_)
+    uptime = int(time.time() - _boot_)
+    await message.reply_photo(
+        photo=config.START_IMG_URL,
+        caption=_["start_1"].format(app.mention, get_readable_time(uptime)),
         reply_markup=InlineKeyboardMarkup(out),
     )
-
+    return await add_served_chat(message.chat.id)
 
 welcome_group = 2
 
@@ -264,32 +243,27 @@ async def welcome(client, message: Message):
                 if chat_id in await blacklisted_chats():
                     await message.reply_text(
                         _["start_7"].format(
-                            f"https://t.me/{app.username}?start=sudolist"
-                        )
+                            app.mention,
+                            f"https://t.me/{app.username}?start=sudolist",
+                            config.SUPPORT_GROUP,
+                        ),
+                        disable_web_page_preview=True,
                     )
                     return await app.leave_chat(chat_id)
-                userbot = await get_assistant(message.chat.id)
+                
+
                 out = start_pannel(_)
-                await message.reply_text(
-                    _["start_3"].format(
-                        config.MUSIC_BOT_NAME,
-                        userbot.username,
-                        userbot.id,
+                await message.reply_photo(
+                    photo=config.START_IMG_URL,
+                    caption=_["start_3"].format(
+                        message.from_user.first_name,
+                        app.mention,
+                        message.chat.title,
+                        app.mention, 
                     ),
                     reply_markup=InlineKeyboardMarkup(out),
                 )
-            if member.id in config.OWNER_ID:
-                return await message.reply_text(
-                    _["start_4"].format(
-                        config.MUSIC_BOT_NAME, member.mention
-                    )
-                )
-            if member.id in SUDOERS:
-                return await message.reply_text(
-                    _["start_5"].format(
-                        config.MUSIC_BOT_NAME, member.mention
-                    )
-                )
-            return
-        except:
-            return
+                await add_served_chat(message.chat.id)
+                await message.stop_propagation()
+        except Exception as ex:
+            print(ex)
