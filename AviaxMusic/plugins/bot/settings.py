@@ -87,9 +87,8 @@ async def settings_back_markup(
             await app.resolve_peer(OWNER_ID)
             OWNER = OWNER_ID
         buttons = private_panel(_)
-        UP, CPU, RAM, DISK = await bot_sys_stats()
         return await CallbackQuery.edit_message_text(
-            _["start_2"].format(CallbackQuery.from_user.mention, app.mention, UP, DISK, CPU, RAM),
+            _["start_2"].format(CallbackQuery.from_user.mention, app.mention),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
     else:
